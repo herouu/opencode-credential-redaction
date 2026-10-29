@@ -52,23 +52,37 @@ opencode 的 `permissions` 配置能拦「工具明确请求某个路径或命�
 
 ## 安装
 
-1. 把 `credential-redaction.ts` 放进 opencode 的插件目录：
+**方式一：npm（推荐）**
 
-   ```
-   ~/.config/opencode/plugin/credential-redaction.ts
-   ```
+在 `opencode.jsonc` 的 `plugins` 里加上包名，opencode 会自行解析安装：
 
-   Windows 即 `C:\Users\<你>\.config\opencode\plugin\credential-redaction.ts`。目录不存在就建。opencode 会自动发现，**不需要**在 `opencode.jsonc` 的 `plugins` 里登记。
+```jsonc
+{
+  "plugins": ["opencode-credential-redaction"]
+}
+```
 
-2. 建密钥清单（可选，但推荐）：
+**方式二：手动放文件**
 
-   ```sh
-   cp redact-secrets.example.txt ~/.config/opencode/redact-secrets.txt
-   ```
+把 `credential-redaction.ts` 放进 opencode 的插件目录：
 
-   每行 `NAME=VALUE`。改完不用重启，5 秒内自动生效。
+```
+~/.config/opencode/plugin/credential-redaction.ts
+```
 
-3. 保存即热加载。验证方法见[调试](#调试)。
+Windows 即 `C:\Users\<你>\.config\opencode\plugin\credential-redaction.ts`。目录不存在就建。opencode 会自动发现，**不需要**在 `plugins` 里登记。
+
+---
+
+然后建密钥清单（可选，但推荐）：
+
+```sh
+cp redact-secrets.example.txt ~/.config/opencode/redact-secrets.txt
+```
+
+每行 `NAME=VALUE`。改完不用重启，5 秒内自动生效。
+
+保存即热加载。验证方法见[调试](#调试)。
 
 > 需要 opencode v2（插件 loader 在 v2 要求 `export default { id, setup }`；v1 的 `export const X = async (ctx) => ({...})` 形状在 v2 **完全不加载**）。
 

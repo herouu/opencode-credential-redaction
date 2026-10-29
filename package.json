@@ -1,19 +1,21 @@
 {
   "name": "opencode-credential-redaction",
   "version": "0.1.0",
-  "private": true,
   "description": "opencode v2 原生凭证脱敏插件：API key / token / 密码在进入模型上下文之前被替换为 [[REDACTED:NAME]] 占位符，并在工具真正执行前回填真值。单文件、零 npm 依赖、无需构建。",
   "type": "module",
   "main": "./credential-redaction.ts",
   "exports": {
     ".": "./credential-redaction.ts"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "credential-redaction.ts",
     "README.md",
     "LICENSE",
-    "redact-secrets.example.txt",
-    "tests"
+    "redact-secrets.example.txt"
   ],
   "engines": {
     "opencode": ">=2.0.0"

@@ -1,0 +1,70 @@
+name: CI
+
+# 触发条件：
+# - push 到 main（防止直接把未通过测试的提交推上去）
+# - 任意 pull_request（含来自 fork 的 PR）
+# - workflow_dispatch（允许手动重跑）
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 最小权限：CI 只读代码，不需要写 token / 不需要访问 secrets
+permissions:
+  contents: read
+
+# 同一分支或同一个 PR 连续推送时，取消上一次还在跑的运行，避免浪费 runner 分钟
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # 一个平台失败也要把其余平台跑完：这个插件在 Windows 上开发，
+      # 但同一份代码在 Linux/macOS 上的行为（路径、换行、编码）也可能不同，
+      # 只有看到全部结果才能判断是不是平台相关问题。
+      fail-fast: false
+      matrix:
+        # Windows 是开发机环境，必须覆盖；插件是纯 Node API（node:fs/node:os/node:path），
+        # 无平台分支代码，测试用 tmpdir() 建临时文件，所以 Linux/macOS 也应通过，顺带一起覆盖。
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 只安装 Bun 运行时。
+      #
+      # 【为什么这里没有 bun install，也没有开缓存】
+      # 本仓库是单文件插件：零 npm 依赖、无构建步骤、无 node_modules 需要还原，
+      # 也没有 bun.lock / package-lock.json。跑 `bun install` 既没有东西可装，
+      # 又可能因为没有 lockfile 而报错或产生噪音日志，所以刻意不做这一步。
+      # 同理刻意不给 setup-bun 传 cache 配置：缓存键依赖 lockfile，
+      # 没有 lockfile 时开启缓存只会得到告警或失败，默认（不放 lockfile 即不缓存）才是正确行为。
+      - name: 安装 Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # 语法门禁：单独把插件转译一遍，确认 TypeScript 语法/转译层面没问题
+      # （--no-bundle 表示只转译不打包，转译结果打到 stdout）。
+      #
+      # 【为什么这一步要写 shell: bash】
+      # windows-latest 上默认 shell 是 pwsh，重定向写法、空设备（NUL vs /dev/null）、
+      # 原生命令退出码的传播规则都和 POSIX shell 不同；一旦写法不一致，就可能出现
+      # "报错了但 job 仍然绿" 的假通过。强制 shell: bash 后 Windows 走 Git Bash，
+      # 三个平台共用同一条 POSIX 命令，行为一致。
+      # stdout 必须丢弃，否则整份转译产物会刷进日志，把真正的错误信息冲掉。
+      - name: 语法门禁（转译检查）
+        shell: bash
+        run: bun build --no-bundle --target=node credential-redaction.ts > /dev/null
+
+      # 走 package.json 里的 scripts.test（= bun tests/harness.mjs），
+      # 这样测试入口只定义在一处，CI 与本地 `bun run test` 不会漂移。
+      # 该 harness 退出码 0=全部通过、1=有失败，失败会让 job 直接红灯。
+      - name: 运行测试
+        run: bun run test

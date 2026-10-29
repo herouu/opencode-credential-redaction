@@ -8,6 +8,7 @@ redact-secrets.txt
 node_modules/
 dist/
 *.log
+*.tgz
 
 # 编辑器 / 系统
 .DS_Store
